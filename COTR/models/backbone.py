@@ -164,6 +164,7 @@ def build_fast_backbone(args):
     dummy_config = {
         'initial_dim': 128,
         'block_dims': [128, 128, 192, 256],
+        'num_groups': 16
     }
     backbone = LoFTRBackbone(dummy_config)
     position_embedding = build_position_encoding(args)
