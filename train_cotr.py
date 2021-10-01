@@ -49,7 +49,8 @@ def train(opt):
     optim_list = [{"params": model.transformer.parameters(), "lr": opt.learning_rate},
                   {"params": model.corr_embed.parameters(), "lr": opt.learning_rate},
                   {"params": model.query_proj.parameters(), "lr": opt.learning_rate},
-                  {"params": model.input_proj.parameters(), "lr": opt.learning_rate},
+                  {"params": model.low_res_proj.parameters(), "lr": opt.learning_rate},
+                  {"params": model.high_res_proj.parameters(), "lr": opt.learning_rate},
                   ]
     if opt.lr_backbone > 0:
         optim_list.append({"params": model.backbone.parameters(), "lr": opt.lr_backbone})
