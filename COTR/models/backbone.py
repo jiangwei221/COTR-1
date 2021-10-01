@@ -15,6 +15,7 @@ from .misc import NestedTensor
 
 from .position_encoding import build_position_encoding
 from COTR.utils import debug_utils, constants
+from .loftr import backbone
 
 
 class FrozenBatchNorm2d(torch.nn.Module):
@@ -89,6 +90,7 @@ class BackboneBase(nn.Module):
             assert m is not None
             mask = F.interpolate(m[None].float(), size=x.shape[-2:]).to(torch.bool)[0]
             out[name] = NestedTensor(x, mask)
+        # exec(debug_utils.embed_breakpoint())
         return out
 
 
@@ -105,6 +107,29 @@ class Backbone(BackboneBase):
             replace_stride_with_dilation=[False, False, dilation],
             pretrained=True, norm_layer=FrozenBatchNorm2d)
         super().__init__(backbone, train_backbone, num_channels, return_interm_layers, layer)
+
+
+class LoFTRBackbone(nn.Module):
+    def __init__(self, config):
+        super().__init__()
+        self.body = backbone.ResNetFPN_16_4(config)
+
+    def forward(self, tensor_list: NestedTensor):
+        assert tensor_list.tensors.shape[-2:] == (constants.MAX_SIZE, constants.MAX_SIZE * 2)
+        left = self.body(tensor_list.tensors[..., 0:constants.MAX_SIZE])
+        right = self.body(tensor_list.tensors[..., constants.MAX_SIZE:2 * constants.MAX_SIZE])
+        xs = {
+            '0': torch.cat([left[0], right[0]], dim=-1),
+            '1': torch.cat([left[1], right[1]], dim=-1)
+        }
+        out: Dict[str, NestedTensor] = {}
+        for name, x in xs.items():
+            m = tensor_list.mask
+            assert m is not None
+            mask = F.interpolate(m[None].float(), size=x.shape[-2:]).to(torch.bool)[0]
+            out[name] = NestedTensor(x, mask)
+        return out
+
 
 
 class Joiner(nn.Sequential):
@@ -132,4 +157,18 @@ def build_backbone(args):
     backbone = Backbone(args.backbone, train_backbone, False, args.dilation, layer=args.layer, num_channels=args.dim_feedforward)
     model = Joiner(backbone, position_embedding)
     model.num_channels = backbone.num_channels
+    return model
+
+
+def build_fast_backbone(args):
+    dummy_config = {
+        'initial_dim': 128,
+        'block_dims': [128, 128, 192, 256],
+    }
+    backbone = LoFTRBackbone(dummy_config)
+    position_embedding = build_position_encoding(args)
+    model = Joiner(backbone, position_embedding)
+    # exec(debug_utils.embed_breakpoint())
+    model.num_low_res_channels = 256
+    model.num_high_res_channels = 128
     return model
