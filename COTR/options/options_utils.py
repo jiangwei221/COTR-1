@@ -16,9 +16,8 @@ def str2bool(v: str) -> bool:
 
 
 def get_compact_naming_cotr(opt) -> str:
-    base_str = 'model:cotr_{0}_{1}_{2}_dset:{3}_bs:{4}_pe:{5}_lrbackbone:{6}'
+    base_str = 'model:cotr_{0}_{1}_dset:{2}_bs:{3}_pe:{4}_lrbackbone:{5}'
     result = base_str.format(opt.backbone,
-                             opt.layer,
                              opt.dim_feedforward,
                              opt.dataset_name,
                              opt.batch_size,

@@ -94,7 +94,7 @@ class FastCOTR(nn.Module):
 
 
 def build(args):
-    use_new = True
+    use_new = args.arch_version == 'v2'
     if not use_new:
         backbone = build_backbone(args)
         transformer = build_transformer(args)

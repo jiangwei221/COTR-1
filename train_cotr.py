@@ -49,9 +49,12 @@ def train(opt):
     optim_list = [{"params": model.transformer.parameters(), "lr": opt.learning_rate},
                   {"params": model.corr_embed.parameters(), "lr": opt.learning_rate},
                   {"params": model.query_proj.parameters(), "lr": opt.learning_rate},
-                  {"params": model.low_res_proj.parameters(), "lr": opt.learning_rate},
-                  {"params": model.high_res_proj.parameters(), "lr": opt.learning_rate},
                   ]
+    if opt.arch_version == 'v1':
+        optim_list.append({"params": model.input_proj.parameters(), "lr": opt.learning_rate})
+    elif opt.arch_version == 'v2':
+        optim_list.append({"params": model.low_res_proj.parameters(), "lr": opt.learning_rate})
+        optim_list.append({"params": model.high_res_proj.parameters(), "lr": opt.learning_rate})
     if opt.lr_backbone > 0:
         optim_list.append({"params": model.backbone.parameters(), "lr": opt.lr_backbone})
     
@@ -115,13 +118,17 @@ if __name__ == "__main__":
     opt = parser.parse_args()
     opt.command = ' '.join(sys.argv)
 
-    layer_2_channels = {'layer1': 256,
-                        'layer2': 512,
-                        'layer3': 1024,
-                        'layer4': 2048, }
-    opt.dim_feedforward = layer_2_channels[opt.layer]
-    opt.num_queries = opt.num_kp
+    if 'resnet' in opt.backbone:
+        layer_2_channels = {'layer1': 256,
+                            'layer2': 512,
+                            'layer3': 1024,
+                            'layer4': 2048, }
+        opt.dim_feedforward = layer_2_channels[opt.layer]
+        opt.arch_version = 'v1'
+    elif 'loftr' in opt.backbone:
+        opt.arch_version = 'v2'
 
+    opt.num_queries = opt.num_kp
     opt.name = get_compact_naming_cotr(opt)
     opt.out = os.path.join(opt.out_dir, opt.name)
     opt.tb_out = os.path.join(opt.tb_dir, opt.name)
